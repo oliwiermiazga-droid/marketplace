@@ -4,7 +4,7 @@ require_login();
 
 $user_id = get_user_id();
 
-// Obsługa usuwania
+
 if (isset($_GET["delete"])) {
     $del_id = intval($_GET["delete"]);
     mysqli_query($conn, "DELETE FROM produkty WHERE id=$del_id AND user_id=$user_id AND status='dostepny'");
@@ -12,7 +12,7 @@ if (isset($_GET["delete"])) {
     exit();
 }
 
-// Obsługa edycji
+
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["edit_id"])) {
     $edit_id = intval($_POST["edit_id"]);
     $edit_nazwa = mysqli_real_escape_string($conn, trim($_POST["edit_nazwa"]));
