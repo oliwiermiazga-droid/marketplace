@@ -1,4 +1,4 @@
-/* ===== RESET & BASE ===== */
+
 * {
     margin: 0;
     padding: 0;
@@ -21,7 +21,7 @@ a:hover {
     text-decoration: underline;
 }
 
-/* ===== NAVBAR ===== */
+
 .navbar {
     background: #1e293b;
     color: #fff;
