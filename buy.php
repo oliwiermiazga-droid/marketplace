@@ -10,42 +10,55 @@ if (!isset($_GET["id"])) {
 $produkt_id = intval($_GET["id"]);
 $kupujacy_id = get_user_id();
 
+$error = "";
+$success_msg = "";
 
-$result = mysqli_query($conn, "SELECT * FROM produkty WHERE id=$produkt_id");
-$produkt = mysqli_fetch_assoc($result);
 
-if (!$produkt) {
-    $error = "Produkt nie istnieje!";
-} elseif ($produkt["user_id"] == $kupujacy_id) {
-    $error = "Nie możesz kupić własnego produktu!";
-} elseif ($produkt["status"] === "sprzedany") {
-    $error = "Ten produkt został już sprzedany!";
-} else {
-   
-    mysqli_begin_transaction($conn);
+mysqli_begin_transaction($conn);
 
-    $success = false;
-    try {
-       
-        $sql1 = "UPDATE produkty SET status='sprzedany' WHERE id=$produkt_id";
-        mysqli_query($conn, $sql1);
+try {
+    
+    $sql_check = "SELECT user_id, status, nazwa FROM produkty WHERE id=$produkt_id";
+    $result = mysqli_query($conn, $sql_check);
+    $produkt = mysqli_fetch_assoc($result);
 
-        
-        $sql2 = "INSERT INTO zakupy (produkt_id, kupujacy_id, data_zakupu) 
-                 VALUES ($produkt_id, $kupujacy_id, NOW())";
-        mysqli_query($conn, $sql2);
-
-        mysqli_commit($conn);
-        $success = true;
-    } catch (Exception $e) {
-        mysqli_rollback($conn);
-        $error = "Błąd podczas zakupu!";
+    if (!$produkt) {
+        throw new Exception("Produkt nie istnieje!");
+    }
+    if ($produkt["user_id"] == $kupujacy_id) {
+        throw new Exception("Nie możesz kupić własnego produktu!");
+    }
+    if ($produkt["status"] === "sprzedany") {
+        throw new Exception("Ten produkt został już sprzedany!");
     }
 
-    if ($success) {
-        $success_msg = "Kupiłeś produkt: " . htmlspecialchars($produkt["nazwa"]);
+    
+    
+    $sql_update = "UPDATE produkty SET status='sprzedany' WHERE id=$produkt_id AND status='dostepny'";
+    mysqli_query($conn, $sql_update);
+
+    
+    
+    if (mysqli_affected_rows($conn) === 0) {
+        throw new Exception("Nie udało się kupić produktu – ktoś inny kupił go chwilę wcześniej!");
     }
+
+    
+    $sql_insert = "INSERT INTO zakupy (produkt_id, kupujacy_id, data_zakupu) 
+                   VALUES ($produkt_id, $kupujacy_id, NOW())";
+    mysqli_query($conn, $sql_insert);
+
+    
+    mysqli_commit($conn);
+    $success_msg = "Gratulacje! Pomyślnie kupiłeś produkt: " . htmlspecialchars($produkt["nazwa"]);
+
+} catch (Exception $e) {
+    
+    mysqli_rollback($conn);
+    $error = $e->getMessage();
 }
+
+mysqli_close($conn);
 ?>
 <!DOCTYPE html>
 <html lang="pl">
@@ -60,11 +73,11 @@ if (!$produkt) {
     <div class="container">
         <h1>Potwierdzenie zakupu</h1>
 
-        <?php if (isset($error)): ?>
-            <p class="error"><?= $error ?></p>
+        <?php if (!empty($error)): ?>
+            <p class="error"><?= htmlspecialchars($error) ?></p>
         <?php endif; ?>
-        <?php if (isset($success_msg)): ?>
-            <p class="success"><?= $success_msg ?></p>
+        <?php if (!empty($success_msg)): ?>
+            <p class="success"><?= htmlspecialchars($success_msg) ?></p>
         <?php endif; ?>
 
         <p><a href="products.php">← Wróć do produktów</a></p>
